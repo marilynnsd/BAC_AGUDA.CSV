@@ -1,0 +1,250 @@
+---
+title: "Análisis Estadístico de Factores Asociados a Meningitis Bacteriana Aguda"
+format: html
+editor: Grupo3
+GRUPO 3: 
+- Camila De la Cruz Norabuena 
+- Uzuriaga Claudio Maria
+- Sandoval Huaringa Marylin
+- Niño de Guzmán Chávez Ingrid 
+- Maurizzio Llamas Vera
+- Durand Palacios María
+---
+
+## Introducción
+
+Este documento analiza el dataset bac_aguda.csv, que contiene 581 observaciones de pacientes con posible meningitis bacteriana aguda. Se realizan cinco análisis estadísticos: regresión lineal simple, correlación, prueba t, ANOVA de una vía y ANOVA de dos vías, utilizando variables como leucocitos_lcr, glucosa_lcr, raza, sexo, y meningitis_bacteriana_aguda.
+
+# Carga de librerías y datos
+
+Se cargan las librerías necesarias y el dataset, verificando su estructura. Asegúrate de ajustar la ruta del archivo si no está en la carpeta DATA en tu escritorio.
+
+```{r}
+# Instalar paquetes (solo es necesario una vez)
+packages <- c("tidyverse", "ggplot2", "car")
+
+installed <- packages %in% rownames(installed.packages())
+if (any(!installed)) {
+  install.packages(packages[!installed], dependencies = TRUE)
+}
+
+# Cargar librerías
+library(tidyverse)
+library(ggplot2)
+library(car)
+
+# Cargar dataset desde ruta absoluta, cambia tu usuario por el usuario de tu ordenador.
+data <- read.csv("C:/Users/Tu Usuario/Desktop/DATA/bac_aguda.csv")
+
+# Confirmar estructura
+str(data)
+
+# Resumen inicial
+summary(data)
+
+```
+
+# Limpieza de Datos
+
+Se estandarizan las variables categóricas y se verifican los valores faltantes (NA).
+
+```{r}
+# Cargar el paquete necesario
+library(dplyr)
+
+# Estandarizar la variable 'sexo': "2" -> "Masculino", mantener otros valores
+data$sexo <- ifelse(data$sexo == "2", "Masculino", data$sexo)
+data$sexo <- as.factor(data$sexo)
+
+# Convertir variables categóricas a factores
+data$raza <- as.factor(data$raza)
+data$mes <- as.factor(data$mes)
+data$año <- as.factor(data$año)
+data$tinción_gram <- as.factor(data$tinción_gram)
+data$cultivo_lcr <- as.factor(data$cultivo_lcr)
+data$cultivo_sangre <- as.factor(data$cultivo_sangre)
+data$conjunto <- as.factor(data$conjunto)
+data$meningitis_bacteriana_aguda <- as.factor(data$meningitis_bacteriana_aguda)
+
+# Verificar valores faltantes por variable
+colSums(is.na(data))
+
+# Resumen de variables clave
+summary(data$leucocitos_lcr)
+summary(data$glucosa_lcr)
+summary(data$raza)
+summary(data$sexo)
+summary(data$meningitis_bacteriana_aguda)
+```
+
+# Regresión lineal simple
+
+Se analiza la relación entre leucocitos_lcr (dependiente) y glucosa_lcr (predictor), ya que niveles bajos de glucosa en LCR suelen asociarse con mayor conteo de leucocitos en meningitis bacteriana.
+```{r}
+# Filtrar datos completos y válidos
+data_reg <- na.omit(data[, c("leucocitos_lcr", "glucosa_lcr")])
+data_reg <- subset(data_reg, leucocitos_lcr > 0)
+
+# Verificar número de observaciones válidas
+nrow(data_reg)
+
+# Ajustar modelo
+model <- lm(leucocitos_lcr ~ glucosa_lcr, data = data_reg)
+summary(model)
+
+# Gráfico de dispersión con línea de regresión (escala log en y)
+ggplot(data_reg, aes(x = glucosa_lcr, y = leucocitos_lcr)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  scale_y_log10(labels = scales::comma) +
+  labs(title = "Regresión Lineal: Leucocitos en LCR vs Glucosa en LCR",
+       x = "Glucosa en LCR (mg/dL)",
+       y = "Leucocitos en LCR (por mm³, escala log)") +
+  theme_minimal()
+```
+
+El modelo evalúa si glucosa_lcr predice leucocitos_lcr. Un coeficiente negativo significativo (p < 0.05) indica que niveles bajos de glucosa se asocian con mayor conteo de leucocitos. El R² indica la proporción de varianza explicada.
+
+# Correlación
+
+Se calcula la correlación de Pearson entre leucocitos_lcr y glucosa_lcr.
+
+```{r}
+# Correlación de Pearson
+cor.test(data$leucocitos_lcr, data$glucosa_lcr, method = "pearson", use = "complete.obs")
+
+# Filtrar datos con valores válidos para escala logarítmica
+data_reg <- subset(data, !is.na(leucocitos_lcr) & !is.na(glucosa_lcr) & leucocitos_lcr > 0)
+
+# Gráfico de dispersión
+ggplot(data_reg, aes(x = glucosa_lcr, y = leucocitos_lcr)) +
+  geom_point() +
+  scale_y_log10(labels = scales::comma) +
+  labs(title = "Correlación entre Leucocitos y Glucosa en LCR",
+       x = "Glucosa en LCR (mg/dL)",
+       y = "Leucocitos en LCR (por mm³, escala log)") +
+  theme_minimal()
+```
+
+Un coeficiente de correlación negativo significativo (p < 0.05) sugiere que a menores niveles de glucosa en LCR, mayor es el conteo de leucocitos, consistente con meningitis bacteriana.
+
+# Prueba t
+
+Se compara leucocitos_lcr entre pacientes con y sin meningitis (meningitis_bacteriana_aguda = "Presente" vs "Ausente").
+
+```{r}
+# Filtrar datos completos y categorías válidas ("Presente" y "Ausente")
+data_ttest <- data %>%
+  filter(meningitis_bacteriana_aguda %in% c("Presente", "Ausente")) %>%
+  select(leucocitos_lcr, meningitis_bacteriana_aguda) %>%
+  na.omit()
+
+# Verificar número de observaciones válidas por grupo
+print(table(data_ttest$meningitis_bacteriana_aguda))
+
+# Continuar solo si hay al menos 1 valor en cada grupo
+if (all(c("Presente", "Ausente") %in% unique(data_ttest$meningitis_bacteriana_aguda))) {
+  
+  # Prueba t
+  print(t.test(leucocitos_lcr ~ meningitis_bacteriana_aguda, data = data_ttest, var.equal = TRUE))
+  
+  # Gráfico de cajas
+  library(ggplot2)
+  ggplot(data_ttest, aes(x = meningitis_bacteriana_aguda, y = leucocitos_lcr, fill = meningitis_bacteriana_aguda)) +
+    geom_boxplot() +
+    scale_y_log10(labels = scales::comma) +
+    labs(
+      title = "Leucocitos en LCR por Diagnóstico de Meningitis",
+      x = "Meningitis Bacteriana",
+      y = "Leucocitos en LCR (por mm³, escala log)"
+    ) +
+    theme_minimal()
+  
+} else {
+  message("No hay suficientes categorías (Presente y Ausente) para comparar.")
+}
+```
+
+Un valor p < 0.05 indica diferencias significativas en leucocitos_lcr entre pacientes con y sin meningitis. Los pacientes con meningitis probablemente tengan conteos más altos.
+
+## ANOVA de Una Vía
+
+Se evalúa si leucocitos_lcr varía según raza (Blanco, Negro, Desconocido).
+
+```{r}
+# Filtrar datos completos
+data_anova1 <- na.omit(data[, c("leucocitos_lcr", "raza")])
+
+# Verificar número de observaciones por raza
+table(data_anova1$raza)
+
+# ANOVA de una vía
+anova1 <- aov(leucocitos_lcr ~ raza, data = data_anova1)
+summary(anova1)
+
+# Prueba post-hoc (Tukey) si es significativo
+if (summary(anova1)[[1]][1,5] < 0.05) {
+  TukeyHSD(anova1)
+}
+
+# Gráfico de cajas
+ggplot(data_anova1, aes(x = raza, y = leucocitos_lcr, fill = raza)) +
+  geom_boxplot() +
+  scale_y_log10(labels = scales::comma) +
+  labs(title = "Leucocitos en LCR por Raza",
+       x = "Raza", y = "Leucocitos en LCR (por mm³, escala log)") +
+  theme_minimal()
+```
+
+Un valor p < 0.05 indica diferencias en leucocitos_lcr entre razas. La prueba de Tukey identifica qué grupos difieren. La categoría "Desconocido" puede introducir ruido, pero se incluye para maximizar los datos.
+
+# ANOVA de Dos Vías
+
+Se analiza el efecto de raza y sexo sobre leucocitos_lcr, incluyendo la interacción.
+
+```{r}
+# Filtrar datos completos
+data_anova2 <- na.omit(data[, c("leucocitos_lcr", "raza", "sexo")])
+
+# Verificar número de observaciones por combinación
+table(data_anova2$raza, data_anova2$sexo)
+
+# ANOVA de dos vías
+anova2 <- aov(leucocitos_lcr ~ raza * sexo, data = data_anova2)
+summary(anova2)
+
+# Gráfico de interacción
+ggplot(data_anova2, aes(x = raza, y = leucocitos_lcr, color = sexo)) +
+  geom_point(stat = "summary", fun = "mean", size = 3) +
+  geom_line(stat = "summary", fun = "mean", aes(group = sexo)) +
+  scale_y_log10(labels = scales::comma) +
+  labs(title = "Interacción entre Raza y Sexo sobre Leucocitos en LCR",
+       x = "Raza", y = "Leucocitos en LCR (por mm³, escala log)", color = "Sexo") +
+  theme_minimal()
+```
+
+Un valor p < 0.05 en la interacción indica que el efecto de raza sobre leucocitos_lcr depende del sexo. Los efectos principales significativos sugieren diferencias por raza o sexo.
+
+# Conclusión
+
+El análisis del dataset bac_aguda.csv revela:
+
+*Regresión lineal simple*: Los niveles de glucosa_lcr predicen leucocitos_lcr, con una relación inversa esperada en meningitis bacteriana.
+
+
+
+*Correlación*: La correlación negativa entre leucocitos_lcr y glucosa_lcr confirma su relación clínica.
+
+
+
+*Prueba t*: Los pacientes con meningitis (Presente) tienen significativamente más leucocitos_lcr que aquellos sin meningitis (Ausente).
+
+
+
+*ANOVA de una vía*: Las diferencias en leucocitos_lcr por raza pueden reflejar factores demográficos o clínicos.
+
+
+
+*ANOVA de dos vías*: La interacción entre raza y sexo sugiere que el efecto de la raza varía según el sexo.
+
+Estos hallazgos destacan la relevancia de leucocitos_lcr y glucosa_lcr en el diagnóstico de meningitis. Para futuros análisis, se recomienda explorar modelos logísticos para predecir meningitis_bacteriana_aguda y manejar valores faltantes con técnicas de imputación.

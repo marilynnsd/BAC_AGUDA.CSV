@@ -1,0 +1,134 @@
+---
+title: "Analizando muestras de estudios de articulos relacionados con bac_aguda"
+format: html
+editor: Grupo 3 
+---
+
+# Integrantes
+
+-   Camila De la Cruz Norabuena
+-   Uzuriaga Claudio Maria
+-   Sandoval Huaringa Marylin
+-   Niño de Guzmán Chávez Ingrid
+-   Maurizzio Llamas Vera
+-   Durand Palacios María
+
+# Introducción
+
+Este documento se enfoca en la evaluación y análisis de la gestión de la meningitis bacteriana aguda (BAC) en Perú. Los pacientes con BAC enfrentan desafíos significativos debido a la necesidad de atención médica urgente, la disponibilidad de medicamentos y la infraestructura de los servicios de salud. Este estudio busca entender cómo se maneja la meningitis bacteriana aguda en el país, específicamente en términos de acceso a atención médica, la disponibilidad de medicamentos y dispositivos médicos necesarios para el control adecuado de la enfermedad.
+
+# Instalación y carga del paquete epiR
+
+Primero, necesitamos asegurarnos de que el paquete epiR esté instalado y cargado en R. Si no está instalado, se instalará automáticamente con el siguiente código:
+
+```{r}
+# Instalar y cargar el paquete epiR si no está instalado
+if (!require(epiR)) {
+  install.packages("epiR")
+}
+library(epiR)
+```
+
+Este código verifica si epiR está disponible; si no lo está, lo instala y luego lo carga en el entorno de R.
+
+# Paso 2: Cálculo de muestra para un estudio de prevalencia
+
+Para un estudio de prevalencia, utilizaremos la función `epi.sssimpleestb` del paquete **epiR**, que calcula el tamaño de muestra necesario para estimar una prevalencia con una precisión dada. Vamos a definir un caso basado en el contexto del documento proporcionado, que estudia la meningitis bacteriana aguda (BAC) en Perú. El estudio buscará estimar la prevalencia de la meningitis bacteriana aguda en una población específica, considerando factores como el acceso a atención médica, la disponibilidad de tratamientos y los dispositivos médicos necesarios para el manejo adecuado de la enfermedad. (DOI: <https://doi.org/10.1097/WCO.0000000000000934>)
+
+**Escenario:**
+
+Queremos estimar la prevalencia de dificultades para acceder a la atención médica entre personas diagnosticadas con meningitis bacteriana aguda (BAC) en Perú. Supongamos una prevalencia esperada de 20% (0.20), basada en la idea de que un porcentaje significativo de personas con BAC enfrentó barreras para recibir atención médica adecuada (el documento menciona dificultades, pero no proporciona un porcentaje exacto, por lo que este es un valor hipotético razonable).
+
+**Precisión deseada**: 5% (0.05), es decir, el margen de error alrededor de la prevalencia estimada.
+
+**Nivel de confianza**: 95% (0.95), un estándar en estudios epidemiológicos.
+
+```{r}
+# Cargar la librería necesaria
+library(epiR)
+
+# Procedimiento para realizar el análisis usando las especificaciones proporcionadas
+
+resultado <- epi.sscc(
+  OR = 1.85,           # Odds ratio
+  p1 = NA,             # Proporción en el grupo de control (NA, calculado)
+  p0 = 0.224,          # Proporción en el grupo experimental
+  n = NA,              # Tamaño de muestra (a completar si es necesario)
+  power = 0.80,        # Potencia del test (80%)
+  r = 1,               # Razón de exposición
+  phi.coef = 0,        # Coeficiente phi, usado para correlación en tablas 2x2
+  design = 1,          # Diseño del estudio (diseño no apareado)
+  sided.test = 2,      # Test bilateral
+  conf.level = 0.95,   # Nivel de confianza al 95%
+  method = "unmatched", # Método para datos no apareados
+  nfractional = FALSE, # Si se permite fracciones de la muestra
+  fleiss = FALSE       # Si se desea usar el ajuste de Fleiss (usualmente para estudios de concordancia)
+)
+
+# Ver el resultado
+print(resultado)
+```
+
+# Resultados e Interpretación
+
+En el estudio sobre el impacto de la meningitis bacteriana aguda (BAC) en la gestión de la enfermedad en Perú, se ha realizado un cálculo del tamaño de muestra necesario para evaluar la prevalencia de la enfermedad y su relación con las dificultades en el acceso a atención médica. El análisis muestra que se necesita un total de 414 participantes, distribuidos equitativamente entre casos y controles. El cálculo se basa en un Odds Ratio (OR) de 1.85, lo que sugiere que los pacientes con meningitis bacteriana aguda durante la pandemia tienen una probabilidad 1.85 veces mayor de experimentar barreras en el acceso a atención médica. Este tamaño de muestra, con un poder estadístico del 80% y un nivel de confianza del 95%, es adecuado para detectar diferencias significativas entre los grupos afectados y no afectados por las restricciones en los servicios de salud, permitiendo evaluar el impacto de los factores socioeconómicos y de salud en la atención de los pacientes con meningitis bacteriana aguda.
+
+### Resultados:
+
+**Acceso a la atención médica**: El estudio reveló que durante el confinamiento, muchas personas con meningitis bacteriana aguda (BAC) enfrentaron dificultades significativas para acceder a servicios médicos. A pesar de la transición hacia consultas remotas y el refuerzo de la atención primaria, la falta de infraestructura y personal capacitado limitó la efectividad de estos servicios, lo que agravó los efectos de la enfermedad.
+
+**Acceso a tratamiento y dispositivos médicos**: El acceso a tratamientos y dispositivos médicos necesarios para el control de la meningitis bacteriana aguda se vio gravemente afectado. Los pacientes enfrentaron escasez de antibióticos adecuados y equipos de monitoreo, especialmente aquellos que vivían fuera de las grandes ciudades. En muchos casos, los pacientes tuvieron que recurrir a organizaciones no gubernamentales, asociaciones de salud o incluso familiares para conseguir los tratamientos necesarios.
+
+**Respuesta del sistema de salud**: La respuesta del sistema de salud en Perú fue gradual. Al principio, hubo una respuesta informal de los proveedores de salud para garantizar la continuidad de la atención, utilizando medios como llamadas telefónicas o mensajes a través de redes sociales para dar seguimiento a los pacientes. Posteriormente, el Ministerio de Salud implementó medidas formales, como las teleconsultas y la distribución de medicamentos, aunque con limitaciones en su implementación debido a la sobrecarga del sistema de salud.
+
+# Interpretación
+
+El estudio pone de manifiesto cómo la pandemia exacerbó las debilidades preexistentes en el sistema de salud peruano, afectando especialmente a personas con enfermedades graves como la meningitis bacteriana aguda (BAC). La escasez de recursos, tanto humanos como materiales, y las restricciones de movimiento durante el confinamiento crearon un entorno donde el acceso a la atención de salud se volvió sumamente limitado.
+
+El papel de las asociaciones de pacientes fue crucial, ya que proporcionaron apoyo social y logístico a los pacientes con BAC, ayudando a mitigar el impacto negativo de las restricciones en su tratamiento. Además, la telemedicina emergió como una alternativa, aunque fue insuficiente para abordar todas las necesidades de los pacientes debido a la falta de exámenes físicos y análisis de laboratorio esenciales para el diagnóstico y tratamiento adecuado de la enfermedad.
+
+En conclusión, a pesar de los esfuerzos por adaptar la respuesta del sistema de salud, las limitaciones en la infraestructura, el personal y los recursos impidieron una atención adecuada para las personas con meningitis bacteriana aguda, subrayando la necesidad urgente de reforzar la infraestructura de salud, mejorar la capacitación del personal y aumentar el acceso a la telemedicina para mejorar la atención en futuros escenarios de crisis.
+
+```{r}
+# Cargar la librería necesaria
+library(epiR)
+
+# Procedimiento para realizar el análisis usando las especificaciones proporcionadas
+
+resultado <- epi.sscc(
+  OR = 1.85,           # Odds ratio
+  p1 = NA,             # Proporción en el grupo de control (NA, calculado)
+  p0 = 0.224,          # Prevalencia esperada en el grupo experimental
+  n = NA,              # Tamaño de muestra (calculado automáticamente)
+  power = 0.80,        # Potencia del test (80%)
+  r = 1,               # Razón de exposición
+  phi.coef = 0,        # Coeficiente phi, usado para correlación en tablas 2x2
+  design = 1,          # Diseño del estudio (diseño no apareado)
+  sided.test = 2,      # Test bilateral
+  conf.level = 0.95,   # Nivel de confianza al 95%
+  method = "unmatched", # Método para datos no apareados
+  nfractional = FALSE, # Sin permitir fracciones de la muestra
+  fleiss = FALSE       # No se ajusta para estudios de concordancia
+)
+
+# Imprimir el resultado
+print(resultado)
+
+# Acceder a los resultados específicos del tamaño de muestra
+resultado_prevalencia_total <- resultado$n.total
+resultado_prevalencia_casos <- resultado$n.case
+resultado_prevalencia_controles <- resultado$n.control
+
+# Resultados e interpretación
+cat("\nResultados e interpretación:\n")
+cat("Para un estudio de prevalencia sobre el impacto de la meningitis bacteriana aguda (BAC) en la gestión de la atención médica en Perú, el análisis muestra que se requiere un tamaño de muestra total de", 
+    resultado_prevalencia_total, "individuos.\n")
+cat("De estos,", resultado_prevalencia_casos, "serán casos con meningitis bacteriana aguda afectados por las restricciones en la atención médica, y", 
+    resultado_prevalencia_controles, "serán individuos del grupo de control (sin meningitis bacteriana aguda).\n")
+
+cat("\nEn base al Odds Ratio (OR) de 1.85, que refleja la mayor probabilidad de enfrentar barreras en el acceso a atención médica para los pacientes con meningitis bacteriana aguda, se ha calculado que el tamaño de muestra necesario es", 
+    resultado_prevalencia_total, "personas, con un poder estadístico del 80% y un nivel de confianza del 95%. Esto permitirá una evaluación precisa del impacto de las restricciones en la atención de los pacientes con meningitis bacteriana aguda en el contexto peruano.\n")
+
+cat("\nEste tamaño de muestra es adecuado para detectar una diferencia significativa en la prevalencia del acceso a atención médica, medicamentos y dispositivos médicos entre los grupos afectados por la pandemia y aquellos no afectados.\n")
+
+```

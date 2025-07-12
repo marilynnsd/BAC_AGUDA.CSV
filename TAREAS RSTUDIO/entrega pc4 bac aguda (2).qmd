@@ -1,0 +1,161 @@
+---
+title: "ENTREGA PC4 BAC_AGUDA"
+format: revealjs
+editor: visual
+---
+
+# Instalamos los paquetes y el dataset:
+
+-   **Qué se hará**: Se instalarán y cargarán paquetes de R como mice para la imputación, ggmice para visualización y tidyverse para manipulación de datos.
+
+<!-- -->
+
+-   **Cómo**: Utilizando comandos como install.packages() y library() en R.
+
+<!-- -->
+
+-   **Propósito**: Preparar el entorno con las herramientas necesarias para manejar datos faltantes y procesar el conjunto de datos de manera eficiente.
+
+```{r}
+# Instalar paquetes (descomentar si es necesario)
+# install.packages("mice")
+# install.packages("ggmice")
+# install.packages("tidyverse")
+# install.packages("gtsummary")
+
+# Cargar librerías necesarias
+library(dplyr)
+library(mice)
+library(VIM)
+library(ggplot2)
+
+# cargar el dataset
+data <- read_csv("C:/DATA/bac_aguda.csv")
+```
+
+# Verificamos la estructura del dataset:
+
+-   **Qué se hará**: Se cargará el archivo almac_sangre.csv y se explorará su estructura con funciones como str(), names() y summary().
+
+<!-- -->
+
+-   **Cómo**: Leyendo el archivo con read.csv() y aplicando funciones exploratorias para revisar variables y estadísticas básicas.
+
+<!-- -->
+
+-   **Propósito**: Identificar las variables (20 en total, con 316 observaciones) y detectar valores faltantes en columnas como Volumen_prostata o Estadio_T.
+
+```{r}
+# Estructura y nombres
+str(data)
+names(data)
+summary(data)
+```
+
+# Preparar los datos:
+
+```{r}
+# 1. Preparación de datos
+# Filtrar casos con meningitis_bacteriana_aguda observada
+data_complete <- data %>% filter(!is.na(meningitis_bacteriana_aguda))
+
+# Seleccionar variables relevantes
+vars <- c("edad", "raza", "sexo", "leucocitos_sangre", "neutrofilos_sangre_pct",
+          "células_banda_sangre_pct", "glucosa_sangre", "glucosa_lcr",
+          "proteina_lcr", "hematies_lcr", "leucocitos_lcr", "neutrofilos_lcr_pct",
+          "linfocitos_lcr_pct", "monocitos_lcr_pct", "meningitis_bacteriana_aguda",
+          "conjunto")
+data_subset <- data_complete %>% select(all_of(vars))
+
+```
+
+# Convertir variables categóricas a factores:
+
+```{r}
+# Recodificar sexo
+data_subset$sexo <- ifelse(data_subset$sexo == "2", "Masculino", "Femenino")
+
+# Convertir variables categóricas a factores
+data_subset <- data_subset %>%
+  mutate(across(c("raza", "sexo", "meningitis_bacteriana_aguda", "conjunto"), as.factor))
+```
+
+# Exploración de datos faltantes
+
+El primer paso para abordar los datos faltantes es identificar dónde se encuentran los valores perdidos dentro del conjunto de datos. Este procedimiento es fundamental porque los datos ausentes pueden introducir sesgos o reducir la precisión de los análisis estadísticos si no se manejan adecuadamente. Al comprender la extensión y el patrón de los valores perdidos, los investigadores pueden tomar decisiones informadas sobre los métodos de imputación más apropiados. En esta etapa, se utilizan resúmenes estadísticos, como el conteo de valores faltantes por variable, y visualizaciones, como gráficos de patrones de ausencia, para obtener una visión clara de la estructura de los datos faltantes
+
+```{r}
+# 2. Exploración de datos faltantes
+# Calcular valores faltantes
+na_count <- colSums(is.na(data_subset))
+print(na_count)
+
+# Visualizar patrones de datos faltantes
+aggr_plot <- aggr(data_subset, col = c("navyblue", "red"), numbers = TRUE, 
+                  sortVars = TRUE, labels = names(data_subset), 
+                  cex.axis = 0.7, gap = 3, ylab = c("Missing data", "Pattern"))
+```
+
+# Imputación múltiple con MICE
+
+-   El éxito del proceso de imputación depende de una selección y preparación cuidadosa de las variables que se incluirán en el modelo. En esta etapa, se identifican todas las variables que se usarán en análisis posteriores, incluso aquellas sin valores faltantes, para preservar las relaciones entre ellas. Además, se ajustan los formatos de las variables, como convertir las categóricas en factores, según los requisitos del paquete MICE. Este paso asegura que el conjunto de datos esté listo para generar imputaciones precisas y confiables.
+
+-   Con las variables seleccionadas y preparadas, se procede a imputar los valores faltantes utilizando el paquete MICE (Imputación Múltiple por Ecuaciones Encadenadas). Este procedimiento es el núcleo del proceso, ya que genera múltiples versiones plausibles del conjunto de datos completo, reflejando la incertidumbre asociada a los datos faltantes. Se especifican parámetros como el número de imputaciones y los métodos de imputación para cada variable, lo que permite obtener resultados más robustos y válidos en comparación con métodos de imputación única.
+
+```{r}
+# 3. Imputación múltiple con MICE
+# Definir métodos de imputación
+meth <- make.method(data_subset)
+meth["edad"] <- "pmm"
+meth["raza"] <- "polyreg"
+meth["sexo"] <- "logreg"
+meth["leucocitos_sangre"] <- "pmm"
+meth["neutrofilos_sangre_pct"] <- "pmm"
+meth["células_banda_sangre_pct"] <- "pmm"
+meth["glucosa_sangre"] <- "pmm"
+meth["glucosa_lcr"] <- "pmm"
+meth["proteina_lcr"] <- "pmm"
+meth["hematies_lcr"] <- "pmm"
+meth["leucocitos_lcr"] <- "pmm"
+meth["neutrofilos_lcr_pct"] <- "pmm"
+meth["linfocitos_lcr_pct"] <- "pmm"
+meth["monocitos_lcr_pct"] <- "pmm"
+meth["meningitis_bacteriana_aguda"] <- "logreg"
+
+# Realizar imputación
+imp <- mice(data_subset, m = 5, maxit = 10, method = meth, seed = 123)
+```
+
+# Análisis predictivo:
+
+-   Con los conjuntos de datos imputados listos, se realiza el análisis principal de interés, en este caso, una regresión logística para modelar una variable objetivo.
+
+-   En este procedimiento, se ajusta el modelo a cada conjunto imputado por separado y luego se combinan los resultados para obtener estimaciones generales e inferencias que consideren la variabilidad introducida por la imputación. Este enfoque garantiza que los resultados finales sean más precisos y confiables, proporcionando una interpretación sólida de las relaciones entre las variables.
+
+```{r}
+# 4. Análisis predictivo
+# Dividir en entrenamiento y prueba
+train_data <- complete(imp, action = "long") %>% filter(conjunto == "Entrenamiento")
+test_data <- complete(imp, action = "long") %>% filter(conjunto == "Prueba")
+
+# Ajustar modelo de regresión logística en cada imputación
+fit <- with(imp, glm(meningitis_bacteriana_aguda ~ edad + sexo + raza + 
+                     leucocitos_sangre + neutrofilos_sangre_pct + 
+                     células_banda_sangre_pct + glucosa_sangre + 
+                     glucosa_lcr + proteina_lcr + hematies_lcr + 
+                     leucocitos_lcr + neutrofilos_lcr_pct + 
+                     linfocitos_lcr_pct + monocitos_lcr_pct, 
+                     family = "binomial"))
+
+# Combinar resultados
+pooled <- pool(fit)
+summary(pooled)
+
+# Evaluar en el conjunto de prueba (ejemplo simplificado para precisión)
+test_pred <- complete(imp, action = "long") %>% 
+  filter(conjunto == "Prueba") %>%
+  mutate(pred = predict(fit$analyses[[1]], newdata = ., type = "response"),
+         pred_class = ifelse(pred > 0.5, "Presente", "Ausente"))
+accuracy <- mean(test_pred$meningitis_bacteriana_aguda == test_pred$pred_class, na.rm = TRUE)
+cat("Precisión en el conjunto de prueba:", accuracy, "\n")
+```

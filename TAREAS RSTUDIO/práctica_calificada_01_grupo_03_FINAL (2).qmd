@@ -1,0 +1,200 @@
+---
+title: "Funciones Médicas en R"
+author: "Stephano Llamas Vera"
+output: html_document
+format: html
+editor: visual
+---
+
+# GRUPO - INTEGRANTES
+
+-   Llamas Vera Stephano
+-   Camila De la Cruz Norabuena
+-   Uzuriaga Claudio Maria
+-   Sandoval Huaringa Marylin
+-   Niño de Guzmán Chávez Ingrid
+-   Durand Palacios María
+
+------------------------------------------------------------------------
+
+# Funciones Médicas
+
+A continuación se presentan 4 nuevas funciones médicas, cada una explicada detalladamente.
+
+## 1. Función para Calcular la Frecuencia Respiratoria (FR)
+
+La **frecuencia respiratoria** es el número de respiraciones que una persona realiza por minuto. Es un indicador importante del estado de la salud respiratoria.
+
+### Valores Normales
+
+-   Adultos: 12-20 respiraciones por minuto
+
+### ¿Cómo desarrollar la función?
+
+La frecuencia respiratoria puede calcularse observando el tiempo entre inhalaciones y exhalaciones, y luego contar cuántas ocurren en un minuto.
+
+### Código en R:
+
+``` r
+# Instalar y cargar los paquetes necesarios
+install.packages("tidyverse")
+library(tidyverse)
+
+calcular_FR <- function(respiraciones, tiempo_minutos) {
+  FR <- respiraciones / tiempo_minutos
+  return(FR)
+}
+# Ejemplo de uso
+calcular_FR(15, 1)  # Devuelve la frecuencia respiratoria de 15 respiraciones en 1 minuto
+```
+
+## 2. Función para Calcular la Saturación de Oxígeno en Sangre (SpO2)
+
+La **saturación de oxígeno en sangre (SpO2)** mide el porcentaje de oxígeno que transportan los glóbulos rojos. Es fundamental para evaluar la eficiencia de la respiración y la función pulmonar.
+
+### Valores Normales
+
+-   Normal: 95-100%
+
+### ¿Cómo desarrollar la función?
+
+La saturación de oxígeno se calcula generalmente mediante un pulsioxímetro, pero para simplificar, podemos hacer una función que calcule una estimación según el nivel de oxígeno y el tiempo.
+
+### Código en R:
+
+``` r
+# Instalar y cargar los paquetes necesarios
+install.packages("plotly")
+library(plotly)
+
+calcular_SpO2 <- function(oxigeno, tiempo) {
+  SpO2 <- oxigeno * 100 / tiempo
+  return(SpO2)
+}
+# Ejemplo de uso
+calcular_SpO2(98, 1)  # Devuelve la saturación de oxígeno de 98% en 1 minuto
+```
+
+## 3. Función para Calcular el Gasto Cardíaco (GC)
+
+El **gasto cardíaco (GC)** es la cantidad de sangre que el corazón bombea por minuto, un indicador crucial de la función cardiovascular.
+
+### Valores Normales
+
+-   Normal: 4.7 - 5.6 L/min
+
+### ¿Cómo desarrollar la función?
+
+El gasto cardíaco se puede calcular utilizando el volumen sistólico y la frecuencia cardíaca:
+
+\[ ext{GC} = ext{Frecuencia cardíaca} imes ext{Volumen sistólico}\]
+
+### Código en R:
+
+``` r
+# Instalar y cargar los paquetes necesarios
+install.packages("reshape2")
+library(reshape2)
+
+calcular_GC <- function(frecuencia_cardíaca, volumen_sistolico) {
+  GC <- frecuencia_cardíaca * volumen_sistolico
+  return(GC)
+}
+# Ejemplo de uso
+calcular_GC(70, 70)  # Devuelve el gasto cardíaco con frecuencia cardíaca 70 bpm y volumen sistólico 70 mL
+```
+
+## 4. Función para Calcular la Tensión Arterial Media en Situaciones de Estrés
+
+La **tensión arterial media (TAM)** en situaciones de estrés puede verse afectada por diversos factores como la ansiedad y la adrenalina. Este cálculo es útil para la monitorización de la salud en situaciones de alta tensión.
+
+### Valores Normales
+
+-   Normal: 70-105 mmHg
+
+### ¿Cómo desarrollar la función?
+
+La fórmula para calcular la PAM en estrés es similar a la convencional, pero incorporando un factor adicional que depende del nivel de estrés:
+
+\[ ext{TAM} = ext{PA diastólica} + rac{1}{3} ( ext{PA sistólica} - ext{PA diastólica}) imes ext{Factor de estrés}\]
+
+### Código en R:
+
+``` r
+# Instalar y cargar los paquetes necesarios
+install.packages("lubridate")
+library(lubridate)
+
+calcular_TAM_estres <- function(sistolica, diastolica, factor_estres) {
+  TAM <- diastolica + (1/3) * (sistolica - diastolica) * factor_estres
+  return(TAM)
+}
+# Ejemplo de uso
+calcular_TAM_estres(120, 80, 1.2)  # Devuelve la TAM con factor de estrés 1.2
+```
+
+## Paquetes Requeridos para el Proyecto
+
+Para realizar estos cálculos correctamente en RStudio, se deben instalar y cargar los siguientes paquetes:
+
+``` r
+# Instalación de paquetes necesarios
+install.packages(c("tidyverse", "plotly", "reshape2", "lubridate"))
+```
+
+Es importante que, antes de usar las funciones, se haya instalado y cargado estos paquetes. Asegúrate de tener las dependencias correctamente configuradas en tu entorno de RStudio.
+
+------------------------------------------------------------------------
+
+# Paquetes adicionales aplicados a funciones médicas
+
+## 1. Paquete \`simstudy\`: Simulación de datos clínicos
+
+Este paquete sirve para simular variables biomédicas, como la frecuencia respiratoria o saturación de oxígeno.
+
+```{r}
+# install.packages("simstudy")
+library(simstudy)
+
+# Definición del esquema
+def <- defData(varname = "frecuencia_resp", dist = "normal", formula = 18, variance = 4)
+
+# Generación de 10 pacientes
+data_FR <- genData(10, def)
+print(data_FR)
+```
+
+------------------------------------------------------------------------
+
+## 2. Paquete `plotly`: Visualización interactiva de datos clínicos
+
+Ya usas este paquete en `calcular_SpO2()`. Aquí mostramos cómo hacer una gráfica interactiva de frecuencia respiratoria y SpO2 combinadas.
+
+```{r}
+library(plotly)
+
+datos <- data.frame(
+  tiempo = 1:5,
+  FR = c(16, 18, 15, 20, 17),
+  SpO2 = c(97, 96, 98, 95, 97)
+)
+
+plot_ly(datos, x = ~tiempo) %>%
+  add_lines(y = ~FR, name = "Frecuencia Respiratoria", line = list(color = "blue")) %>%
+  add_lines(y = ~SpO2, name = "SpO2", line = list(color = "red")) %>%
+  layout(title = "Signos Vitales", yaxis = list(title = "Valor"))
+```
+
+------------------------------------------------------------------------
+
+## Paquete `DescTools`: Estadística descriptiva para datos fisiológicos
+
+Calcula el intervalo de confianza de la media, útil para evaluar medidas como SpO2 en una muestra.
+
+```{r}
+# install.packages("DescTools")
+library(DescTools)
+
+SpO2_mediciones <- c(96, 97, 98, 95, 97)
+MeanCI(SpO2_mediciones)
+```

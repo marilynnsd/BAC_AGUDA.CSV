@@ -1,0 +1,128 @@
+
+---
+title: "Análisis Estadístico Descriptivo de Datos de Meningitis Bacteriana Aguda"
+author: "Grupo 3: Camila De la Cruz Norabuena, Uzuriaga Claudio Maria, Sandoval Huaringa Marylin, Niño de Guzmán Chávez Ingrid, Stephano Llamas Vera, Durand Palacios María"
+output: html_document
+---
+
+# Introducción
+
+En este análisis, se examinan los datos de pacientes diagnosticados con meningitis bacteriana aguda, con el objetivo de proporcionar un resumen estadístico detallado del dataset **bac_aguda.csv**. Se realiza un análisis de las variables **categóricas** (como **Sexo**, **Raza**) y **continuas** (como **Edad**, **Leucocitos en sangre**, **Glucosa en sangre**), calculando medidas estadísticas claves como **media**, **mediana**, **desviación estándar** y **percentiles**.
+
+Este documento utiliza **R** y los paquetes **dplyr** para la manipulación de los datos y **gtsummary** para la presentación de las estadísticas descriptivas.
+
+# Instalación de Paquetes Necesarios
+
+Para realizar este análisis, es necesario instalar y cargar los siguientes paquetes:
+
+1. **`dplyr`**: Para la manipulación de los datos.
+2. **`readr`**: Para la lectura del archivo CSV.
+3. **`gtsummary`**: Para la creación de tablas descriptivas y presentación clara de los resultados.
+
+```{r}
+# Instalar los paquetes necesarios si no están instalados
+if (!require(dplyr)) install.packages("dplyr")
+if (!require(readr)) install.packages("readr")
+if (!require(gtsummary)) install.packages("gtsummary")
+```
+
+Para cargarlos, usamos el siguiente código:
+
+```{r}
+# Cargar los paquetes necesarios
+library(dplyr)
+library(readr)
+library(gtsummary)
+```
+
+# Cargando el Dataset
+
+Cargamos el dataset **bac_aguda.csv** para comenzar con el análisis de los datos.
+
+```{r}
+# Cargar el dataset de bac_aguda
+data <- read.csv("/mnt/data/bac_aguda.csv")
+```
+
+# Procedimiento para Resumir los Datos
+
+El procedimiento para resumir los datos incluye los siguientes pasos:
+
+1. **Cargar el dataset**: Usamos la función `read.csv()` para cargar los datos.
+2. **Resumen básico**: Utilizamos la función `summary()` para obtener un resumen de todas las variables del dataset.
+3. **Generar estadísticas descriptivas**: Calculamos estadísticas como la **media**, **mediana**, **desviación estándar**, y **percentiles** para las variables de interés.
+
+## Resumen de Variables Categóricas
+
+Las variables categóricas incluyen **Sexo** y **Raza**. Para generar un resumen de estas variables, utilizamos la función **`table()`**.
+
+```{r}
+# Resumen de las variables categóricas
+table(data$sexo)
+table(data$raza)
+```
+
+## Resumen de Variables Continuas
+
+Las variables continuas incluyen **Edad**, **Leucocitos en sangre**, y **Glucosa en sangre**. Para obtener un resumen de estas variables, usamos la función **`summary()`** y **`mean()`**.
+
+```{r}
+# Resumen de las variables continuas
+summary(data$edad)
+summary(data$leucocitos_sangre)
+summary(data$glucosa_sangre)
+```
+
+# Tabla 1: Estadísticas Descriptivas con gtsummary
+
+Con el paquete **gtsummary**, generamos una tabla con las estadísticas descriptivas de las variables seleccionadas. La tabla incluye la **media**, **desviación estándar** y **percentiles** (25%, 50%, 75%) de las variables **Edad**, **Leucocitos en sangre** y **Glucosa en sangre**.
+
+```{r}
+# Generación de la tabla descriptiva con gtsummary
+tabla_resumen <- data %>%
+  select(edad, leucocitos_sangre, glucosa_sangre, sexo, raza) %>%
+  tbl_summary(by = sexo)
+
+# Mostrar la tabla
+tabla_resumen
+```
+
+# Configuración de Estilo e Idioma
+
+Es posible personalizar el estilo y el idioma del documento para hacerlo más accesible. Aquí mostramos cómo configurar el estilo para el archivo HTML generado:
+
+```yaml
+output:
+  html_document:
+    css: estilo.css
+    toc: true
+    toc_depth: 2
+```
+
+# Recodificación de Variables y Adición de Nombres Correctos
+
+En algunos casos, es necesario recodificar variables para mejorar su legibilidad. Por ejemplo, recodificamos **Sexo** y **Raza** para asegurarnos de que los valores sean consistentes.
+
+```{r}
+# Recodificación de la variable 'Sexo' en categorías 'Masculino' y 'Femenino'
+data$sexo <- recode(data$sexo, `1` = "Masculino", `2` = "Femenino")
+```
+
+También podemos cambiar los nombres de las columnas para mejorar la legibilidad del dataset.
+
+```{r}
+# Asignar nombres adecuados a las columnas
+colnames(data) <- c("Numero_Caso", "Año", "Mes", "Edad", "Raza", "Sexo", "Leucocitos_Sangre", "Neutrofilos_Sangre", "Glucosa_Sangre")
+```
+
+# Conclusión
+
+Este análisis descriptivo proporciona una visión clara de las características de los pacientes diagnosticados con meningitis bacteriana aguda. A través de las **medias**, **medianas**, **percentiles** y **quantiles** calculados, hemos podido obtener una descripción detallada de las variables clave. Utilizando el paquete **gtsummary**, se presentó una tabla clara y bien estructurada de los resultados.
+
+La recodificación de variables y la adición de nombres adecuados a las columnas han mejorado la comprensión y la consistencia del dataset. Este análisis es solo el comienzo de una exploración más profunda y puede servir como base para investigaciones adicionales.
+
+Este análisis muestra cómo herramientas como **R** y **Quarto** son fundamentales para realizar análisis estadísticos eficientes y efectivos en grandes volúmenes de datos. Los resultados obtenidos proveen una base sólida para futuras investigaciones.
+
+---
+
+Este documento proporciona una guía completa para realizar análisis descriptivos utilizando **R** y **Quarto**, abarcando desde el manejo de variables hasta la creación de tablas descriptivas y la personalización de la salida en HTML.

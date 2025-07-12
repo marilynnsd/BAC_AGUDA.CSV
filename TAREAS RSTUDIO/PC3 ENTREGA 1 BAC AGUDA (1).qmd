@@ -1,0 +1,195 @@
+---
+title: "Análisis de Meningitis Bacteriana Aguda con Regresión Logística"
+format: html
+editor: visual
+GRUPO 3: 
+- Camila De la Cruz Norabuena 
+- Uzuriaga Claudio Maria
+- Sandoval Huaringa Marylin
+- Niño de Guzmán Chávez Ingrid 
+- Maurizzio Llamas Vera
+- Durand Palacios María
+---
+
+## Instalación y Carga de Paquetes
+
+En este análisis, utilizaremos varios paquetes de R para realizar la regresión logística, manejar datos y generar visualizaciones. Los paquetes necesarios son:
+
+-   tidyverse: Para manipulación y visualización de datos.
+-   caret: Para entrenar y evaluar modelos de machine learning.
+-   pROC: Para generar curvas ROC y evaluar el rendimiento del modelo.
+-   knitr: Para formatear tablas y resultados en el documento Quarto.
+
+Procedemos a instalar y cargar los paquetes:
+
+```{r}
+# Instalación de paquetes (si no están instalados)
+if(!require(tidyverse)) install.packages("tidyverse")
+if(!require(caret)) install.packages("caret")
+if(!require(pROC)) install.packages("pROC")
+if(!require(knitr)) install.packages("knitr")
+
+# Carga de paquetes
+library(tidyverse)
+library(caret)
+library(pROC)
+library(knitr)
+```
+
+## Carga y Preparación de los Datos
+
+El objetivo de esta sección es cargar el conjunto de datos bac_aguda.csv y prepararlo para el análisis. Esto incluye manejar valores faltantes (NA) y transformar variables categóricas en factores para que puedan ser utilizadas en el modelo de regresión logística.
+
+### Paquetes Utilizados
+
+-   tidyverse: Para la manipulación de datos (dplyr, tidyr).
+-   caret: Para preprocesamiento de datos.
+
+```{r}
+# Cargar librerías necesarias
+library(dplyr)
+
+# Cargar el conjunto de datos
+data <- read.csv("C:\\Users\\Franco Rodrigo\\Desktop\\DATA\\bac_aguda.csv", stringsAsFactors = FALSE)
+
+# Convertir variables categóricas a factores
+data <- data %>%
+  mutate(
+    raza = as.factor(raza),
+    sexo = as.factor(sexo),
+    meningitis_bacteriana_aguda = as.factor(meningitis_bacteriana_aguda),
+    mes = as.factor(mes),
+    tinción_gram = as.factor(tinción_gram),
+    cultivo_lcr = as.factor(cultivo_lcr),
+    cultivo_sangre = as.factor(cultivo_sangre),
+    conjunto = as.factor(conjunto)
+  )
+
+# Reemplazar NA con la mediana para variables numéricas
+numeric_vars <- c("edad", "leucocitos_sangre", "neutrofilos_sangre_pct",
+                  "células_banda_sangre_pct", "glucosa_sangre", "glucosa_lcr",
+                  "proteina_lcr", "hematies_lcr", "leucocitos_lcr",
+                  "neutrofilos_lcr_pct", "linfocitos_lcr_pct", "monocitos_lcr_pct")
+
+for (var in numeric_vars) {
+  data[[var]][is.na(data[[var]])] <- median(data[[var]], na.rm = TRUE)
+}
+
+# Filtrar solo el conjunto de entrenamiento y eliminar NA en la variable objetivo
+train_data <- data %>%
+  filter(conjunto == "Entrenamiento") %>%
+  filter(!is.na(meningitis_bacteriana_aguda))
+
+# Resumen de los datos
+summary(train_data)
+```
+
+### Gráfico: Distribución de la Variable Objetivo
+
+Visualizamos la distribución de la variable objetivo meningitis_bacteriana_aguda para entender el balance de clases.
+
+```{r}
+# Cargar la librería necesaria
+library(ggplot2)
+
+# Gráfico: Distribución de la Variable Objetivo
+ggplot(train_data, aes(x = meningitis_bacteriana_aguda, fill = meningitis_bacteriana_aguda)) +
+  geom_bar() +
+  labs(
+    title = "Distribución de Meningitis Bacteriana Aguda",
+    x = "Meningitis Bacteriana Aguda",
+    y = "Frecuencia"
+  ) +
+  theme_minimal()
+```
+
+## Aplicación del Método de Regresión Logística
+
+En este paso, aplicaremos un modelo de regresión logística para predecir la presencia o ausencia de meningitis bacteriana aguda. La regresión logística es un método estadístico utilizado para modelar una variable dependiente binaria (en este caso, meningitis_bacteriana_aguda) en función de varias variables independientes. Utilizaremos el conjunto de datos de entrenamiento para ajustar el modelo y el conjunto de prueba para evaluar su rendimiento.
+
+### Paquetes Utilizados
+
+-   caret: Para entrenar el modelo de regresión logística.
+-   tidyverse: Para manipulación de datos.
+-   pROC: Para evaluar el modelo con una curva ROC.
+
+```{r}
+# Cargar librerías necesarias
+library(ggplot2)
+
+# Asegurar que la variable dependiente sea factor
+train_data$meningitis_bacteriana_aguda <- as.factor(train_data$meningitis_bacteriana_aguda)
+
+# Ajustar modelo de regresión logística
+modelo <- glm(meningitis_bacteriana_aguda ~ edad + raza + sexo + leucocitos_sangre + 
+                neutrofilos_sangre_pct + células_banda_sangre_pct + glucosa_sangre +
+                glucosa_lcr + proteina_lcr + hematies_lcr + leucocitos_lcr + 
+                neutrofilos_lcr_pct + linfocitos_lcr_pct + monocitos_lcr_pct + 
+                tinción_gram + cultivo_lcr + cultivo_sangre,
+              family = binomial(link = "logit"), data = train_data)
+
+# Resumen del modelo
+summary(modelo)
+
+# Calcular odds ratios
+odds_ratios <- exp(coef(modelo))
+
+# Crear data frame para graficar
+odds_df <- data.frame(
+  Predictor = names(odds_ratios),
+  Odds_Ratio = odds_ratios
+)
+
+# Eliminar intercepto para visualizar solo predictores
+odds_df <- odds_df[odds_df$Predictor != "(Intercept)", ]
+
+# Graficar odds ratios
+ggplot(odds_df, aes(x = Predictor, y = Odds_Ratio)) +
+  geom_bar(stat = "identity", fill = "salmon") +
+  labs(title = "Odds Ratios de los Predictores",
+       x = "Predictor", y = "Odds Ratio") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+## Documentación e Interpretación de los Resultados
+
+En esta sección, interpretaremos los resultados obtenidos del modelo de regresión logística. Analizaremos los coeficientes del modelo para entender la influencia de cada variable en la predicción de meningitis bacteriana aguda, revisaremos la matriz de confusión para evaluar el rendimiento del modelo y discutiremos la curva ROC para medir la capacidad discriminativa del modelo.
+
+### Paquetes Utilizados
+
+-   knitr: Para formatear los resultados en tablas.
+-   pROC: Para interpretar la curva ROC.
+
+```{r}
+# ========================
+# Librerías necesarias
+# ========================
+library(pROC)
+library(caret)
+library(knitr)
+library(ggplot2)
+
+# Crear objeto ROC
+roc_obj <- roc(datos$meningitis_bacteriana_aguda, predicciones)
+
+# Calcular AUC
+auc_valor <- auc(roc_obj)
+
+# Gráfico de la curva ROC
+ggroc(roc_obj, color = "blue") +
+  labs(
+    title = "Curva ROC del Modelo de Regresión Logística",
+    x = "1 - Especificidad",
+    y = "Sensibilidad"
+  ) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray")
+
+```
+
+## Conclusión
+
+En este análisis, se aplicó un modelo de regresión logística para predecir la presencia de meningitis bacteriana aguda utilizando el conjunto de datos bac_aguda.csv. Los pasos realizados incluyeron la carga y limpieza de los datos, el entrenamiento del modelo, y la evaluación de su rendimiento mediante una matriz de confusión y una curva ROC.
+
+Los resultados muestran que el modelo tiene una capacidad aceptable para predecir la meningitis bacteriana aguda, con una exactitud de r round(conf_matrix\$overall\["Accuracy"\], 3) y un AUC de r round(auc(roc_obj), 3). Las variables más influyentes, según los coeficientes del modelo, incluyen los resultados de laboratorio como leucocitos_lcr, tinción_gram y cultivo_lcr, lo que sugiere que estas pruebas son clave para el diagnóstico.
+
+Sin embargo, el modelo podría beneficiarse de ajustes adicionales, como la selección de variables más rigurosa o el uso de técnicas para manejar el desbalance de clases, ya que la distribución de la variable objetivo mostró un posible desbalance. Futuros análisis podrían explorar otros algoritmos de machine learning o incorporar más datos para mejorar el rendimiento del modelo.

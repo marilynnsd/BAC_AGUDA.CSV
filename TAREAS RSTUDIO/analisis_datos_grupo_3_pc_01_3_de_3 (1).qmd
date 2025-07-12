@@ -1,0 +1,106 @@
+---
+title: "Análisis de Datos del Grupo 3"
+author: "Grupo 3"
+output: html_document
+---
+
+**GRUPO - INTEGRANTES**
+
+-   Llamas Vera Stephano
+
+-   Camila De la Cruz Norabuena
+
+-   Uzuriaga Claudio Maria
+
+-   Sandoval Huaringa Marylin
+
+-   Niño de Guzmán Chávez Ingrid
+
+-   Durand Palacios María
+
+## Introducción
+
+Este documento detalla el proceso de importación, limpieza y transformación de un dataset proporcionado en formato CSV. El dataset contiene datos médicos de casos de meningitis bacteriana aguda, con diversas variables como la edad, los resultados de pruebas sanguíneas, y la presencia de la enfermedad. A través de este análisis, realizaremos la limpieza de datos, tratamiento de valores faltantes, conversión de tipos de datos, y la estandarización de las categorías.
+
+## Importación de datos
+
+El primer paso consiste en importar el archivo CSV. En R, utilizamos la función `read.csv()` para cargar los datos:
+
+```{r}
+# Importación del dataset
+dataset <- read.csv("/mnt/data/bac_aguda.csv", stringsAsFactors = FALSE)
+
+# Verificamos las primeras filas del dataset
+head(dataset)
+```
+
+Este código carga el archivo `bac_aguda.csv` y muestra las primeras filas del dataset para asegurarnos de que se ha importado correctamente.
+
+## Exportación de datos
+
+Una vez que hemos realizado las modificaciones necesarias en el dataset, podemos exportarlo a un nuevo archivo CSV. A continuación, se muestra cómo hacerlo:
+
+```{r}
+# Exportación del dataset limpio
+write.csv(dataset, "/mnt/data/bac_aguda_limpio.csv", row.names = FALSE)
+```
+
+Este comando guarda el dataset limpio como `bac_aguda_limpio.csv`, sin incluir los números de fila.
+
+## Limpieza de datos
+
+La limpieza de datos es una parte esencial en cualquier análisis. En este caso, se llevarán a cabo las siguientes tareas:
+
+### 1. Limpieza de nombres de columnas
+
+Es común que los nombres de las columnas contengan espacios o caracteres especiales, lo cual puede dificultar el análisis. Utilizamos el siguiente código para limpiar los nombres de las columnas:
+
+```{r}
+# Limpieza de nombres de columnas
+names(dataset) <- gsub(" ", "_", names(dataset)) # Reemplaza espacios por guiones bajos
+names(dataset) <- gsub("[[:punct:]]", "", names(dataset)) # Elimina caracteres especiales
+
+# Verificamos los cambios en los nombres de las columnas
+head(dataset)
+```
+
+Este código reemplaza los espacios por guiones bajos y elimina cualquier signo de puntuación de los nombres de las columnas.
+
+### 2. Limpieza de categorías
+
+Las categorías pueden tener valores inconsistentes. A continuación, se muestra cómo limpiar las categorías de algunas columnas del dataset:
+
+```{r}
+# Limpieza de categorías
+dataset$raza <- tolower(dataset$raza) # Convierte las categorías a minúsculas
+dataset$raza <- gsub(" ", "_", dataset$raza) # Reemplaza espacios por guiones bajos
+dataset$raza <- factor(dataset$raza) # Convierte la columna en un factor
+
+dataset$sexo <- tolower(dataset$sexo) # Convierte las categorías de 'sexo' a minúsculas
+dataset$sexo <- gsub(" ", "_", dataset$sexo) # Reemplaza espacios por guiones bajos
+dataset$sexo <- factor(dataset$sexo) # Convierte la columna en un factor
+
+# Verificamos la limpieza de las columnas
+head(dataset$raza)
+head(dataset$sexo)
+```
+
+Este código convierte las categorías de la columna `raza` y `sexo` a minúsculas y reemplaza los espacios por guiones bajos.
+
+### 3. Manejo de valores faltantes
+
+En muchos casos, los valores faltantes (`NA`) deben manejarse adecuadamente. A continuación, mostramos cómo reemplazar los valores `NA` en una columna numérica por la media:
+
+```{r}
+# Reemplazar valores faltantes por la media en la columna leucocitos_sangre
+dataset$leucocitos_sangre[is.na(dataset$leucocitos_sangre)] <- mean(dataset$leucocitos_sangre, na.rm = TRUE)
+
+# Verificamos la columna después de la imputación
+head(dataset$leucocitos_sangre)
+```
+
+Este código reemplaza los valores `NA` en la columna `leucocitos_sangre` por la media de la columna.
+
+## Conclusión
+
+En este documento, hemos cubierto los pasos fundamentales para importar, limpiar y transformar un dataset en R. La limpieza de los datos garantiza que el conjunto de datos sea adecuado para análisis posteriores, mientras que las transformaciones realizadas facilitan la creación de nuevas variables y la estandarización de categorías. Finalmente, hemos exportado el dataset limpio para su uso futuro. El proceso de preparación de los datos es crucial para obtener resultados confiables y reproducibles en cualquier análisis de datos.

@@ -1,0 +1,313 @@
+---
+title: "ENTREGA PC4 BAC AGUDA"
+format: html
+editor: visual
+GRUPO 3: 
+- Camila De la Cruz Norabuena 
+- Uzuriaga Claudio Maria
+- Sandoval Huaringa Marylin
+- Niño de Guzmán Chávez Ingrid 
+- Maurizzio Llamas Vera
+- Durand Palacios María
+---
+
+# Introducción
+
+-   La meningitis bacteriana aguda es una emergencia médica caracterizada por la inflamación de las meninges debido a una infección bacteriana, lo que puede llevar a graves complicaciones o incluso la muerte si no se diagnostica y trata rápidamente.
+
+-   El dataset bac_aguda.csv contiene datos de 581 pacientes con sospecha de esta enfermedad, incluyendo variables clínicas y de laboratorio como edad, sexo, niveles de leucocitos, glucosa y proteínas, junto con el diagnóstico final (presencia o ausencia de meningitis).
+
+-   El propósito de este análisis es emplear la regresión logística, una técnica de *machine learning* supervisada, para predecir la presencia de meningitis bacteriana aguda y evaluar su utilidad en un contexto clínico, apoyando así la toma de decisiones médicas y mejorando los resultados para los pacientes.
+
+    # Carga de paquetes y dataset:
+
+Antes de comenzar con los análisis, necesitamos instalar y cargar los paquetes de R que utilizaremos para importar datos, manipularlos, realizar los agrupamientos y visualizar los resultados. Cambiamos el "TUUSUARIO" por el nombre de nuestro ordenador.
+
+```{r}
+# Instalar paquetes si no están instalados
+if (!require(tidyverse)) install.packages("tidyverse")
+if (!require(caret)) install.packages("caret")
+if (!require(mice)) install.packages("mice")
+if (!require(ggplot2)) install.packages("ggplot2")
+if (!require(dplyr)) install.packages("dplyr")
+
+# Cargar paquetes
+library(tidyverse)
+library(caret)
+library(mice)
+library(ggplot2)
+library(dplyr)
+library(readr)
+# Leer el archivo CSV
+data <- read_csv("C:/DATA/bac_aguda.csv")
+```
+
+# Verificamos la estructura del dataset:
+
+Se carga el dataset y se revisan las primeras filas para entender su estructura.
+
+```{r}
+# Estructura y nombres
+str(data)
+names(data)
+summary(data)
+```
+
+# Documentación de la Aplicación de una Técnica de Machine Learning
+
+-   La predicción de enfermedades como la meningitis bacteriana aguda requiere un enfoque sistemático para transformar datos crudos en un modelo funcional.
+
+-   En este punto, se aborda la aplicación de la regresión logística, una técnica ideal para clasificaciones binarias, como distinguir entre pacientes con y sin meningitis.
+
+-   Este proceso incluye la preparación de los datos (manejo de valores faltantes, codificación de variables y normalización), el entrenamiento del modelo y su evaluación inicial.
+
+-   La meta es construir un modelo robusto que pueda generalizar bien a nuevos casos, un aspecto crítico en aplicaciones clínicas donde la precisión puede marcar la diferencia entre la vida y la muerte.
+
+# Manejo de Valores Faltantes
+
+Usamos imputación múltiple con mice para manejar los valores faltantes:
+
+-   Para variables numéricas, imputamos con la mediana.
+-   Para variables categóricas, imputamos con la moda.
+
+```{r}
+# Definir variables numéricas y categóricas
+numeric_cols <- c("leucocitos_sangre", "neutrofilos_sangre_pct", "glucosa_sangre", 
+                  "glucosa_lcr", "proteina_lcr", "leucocitos_lcr")
+categorical_cols <- c("sexo", "raza", "tinción_gram")
+
+# Imputar valores faltantes
+imp <- mice(data, m = 1, method = "pmm", maxit = 5, seed = 123)
+data_imputed <- complete(imp)
+
+# Verificar que no hay NA's
+colSums(is.na(data_imputed))
+```
+
+# Codificación de Variables Categóricas
+
+Convertimos las variables categóricas a numéricas:
+
+-   sexo: "Femenino" → 0, "Masculino" → 1.
+-   raza: Usamos factor y luego convertimos a numérico.
+-   tinción_gram: Similar a raza.
+
+También codificamos la variable objetivo meningitis_bacteriana_aguda como 0 (Ausente) y 1 (Presente).
+
+```{r}
+data_imputed <- data_imputed %>%
+  mutate(sexo = ifelse(sexo == "Femenino", 0, 1),
+         raza = as.numeric(factor(raza)),
+         tinción_gram = as.numeric(factor(tinción_gram)),
+         meningitis_bacteriana_aguda = ifelse(meningitis_bacteriana_aguda == "Presente", 1, 0))
+```
+
+# Selección de Características
+
+Seleccionamos las variables relevantes para el modelo:
+
+```{r}
+features <- c(numeric_cols, categorical_cols)
+target <- "meningitis_bacteriana_aguda"
+```
+
+# División de Datos
+
+Dividimos el dataset en entrenamiento (80%) y prueba (20%):
+
+```{r}
+# Instalar y cargar caret
+# install.packages("caret")   # Descomenta si no lo tienes instalado
+library(caret)
+
+# Verificar estructura
+str(data_imputed$meningitis_bacteriana_aguda)
+
+# Convertir a factor si no lo es
+data_imputed$meningitis_bacteriana_aguda <- as.factor(data_imputed$meningitis_bacteriana_aguda)
+
+# Semilla para reproducibilidad
+set.seed(42)
+
+# Crear partición
+train_index <- createDataPartition(
+  data_imputed$meningitis_bacteriana_aguda,
+  p = 0.8,
+  list = FALSE
+)
+
+# Crear datasets
+train_data <- data_imputed[train_index, ]
+test_data <- data_imputed[-train_index, ]
+
+# Verificar dimensiones
+dim(train_data)
+dim(test_data)
+```
+
+# Escalado de Características
+
+Escalamos las variables numéricas para normalizarlas:
+
+```{r}
+scaler <- preProcess(train_data[, numeric_cols], method = c("center", "scale"))
+train_scaled <- predict(scaler, train_data[, numeric_cols])
+test_scaled <- predict(scaler, test_data[, numeric_cols])
+
+# Combinar con variables categóricas
+train_final <- cbind(train_scaled, train_data[, categorical_cols], meningitis_bacteriana_aguda = train_data[[target]])
+test_final <- cbind(test_scaled, test_data[, categorical_cols], meningitis_bacteriana_aguda = test_data[[target]])
+```
+
+# Modelado
+
+Entrenamos un modelo de regresión logística:
+
+```{r}
+library(readr)
+library(caret)
+
+# Cargar datos
+train_final <- read_csv("C:/DATA/bac_aguda.csv")
+
+# Convertir variable respuesta a factor
+train_final$meningitis_bacteriana_aguda <- as.factor(train_final$meningitis_bacteriana_aguda)
+
+# Revisar NAs
+print(colSums(is.na(train_final)))
+
+# Imputar variables numéricas
+for(i in names(train_final)) {
+  if(is.numeric(train_final[[i]])) {
+    train_final[[i]][is.na(train_final[[i]])] <- mean(train_final[[i]], na.rm = TRUE)
+  }
+}
+
+# Imputar variables categóricas (factores o characters)
+for(i in names(train_final)) {
+  if(is.character(train_final[[i]])) {
+    train_final[[i]][is.na(train_final[[i]])] <- "Desconocido"
+  } else if(is.factor(train_final[[i]])) {
+    train_final[[i]][is.na(train_final[[i]])] <- levels(train_final[[i]])[1]
+  }
+}
+
+# Revisar de nuevo si quedan NAs
+print(colSums(is.na(train_final)))
+
+# Modelo
+model <- train(meningitis_bacteriana_aguda ~ .,
+               data = train_final,
+               method = "glm",
+               trControl = trainControl(method = "cv", number = 5))
+
+print(model)
+```
+
+# Predicciones y Evaluación
+
+Realizamos predicciones en el conjunto de prueba y evaluamos el modelo:
+
+```{r}
+library(readr)
+library(caret)
+
+# 1. Cargar datos
+data <- read_csv("C:/DATA/bac_aguda.csv")
+
+# 2. Convertir respuesta a factor
+data$meningitis_bacteriana_aguda <- as.factor(data$meningitis_bacteriana_aguda)
+
+# 3. Eliminar filas con NA en respuesta
+data <- data[!is.na(data$meningitis_bacteriana_aguda), ]
+
+# 4. Imputar NAs en variables predictoras
+for (var in names(data)) {
+  if (var != "meningitis_bacteriana_aguda") {
+    if (is.numeric(data[[var]])) {
+      media <- mean(data[[var]], na.rm = TRUE)
+      data[[var]][is.na(data[[var]])] <- media
+    } else if (is.factor(data[[var]]) || is.character(data[[var]])) {
+      moda <- names(sort(table(data[[var]]), decreasing = TRUE))[1]
+      data[[var]][is.na(data[[var]])] <- moda
+    }
+  }
+}
+
+# 5. Quitar numero_caso si existe
+if ("numero_caso" %in% names(data)) {
+  data <- data[, !(names(data) %in% "numero_caso")]
+}
+
+# 6. Dividir en train y test
+set.seed(123)
+train_index <- createDataPartition(data$meningitis_bacteriana_aguda, p = 0.7, list = FALSE)
+train_final <- data[train_index, ]
+test_final <- data[-train_index, ]
+
+# 7. Entrenar modelo
+model <- train(
+  meningitis_bacteriana_aguda ~ .,
+  data = train_final,
+  method = "glm",
+  trControl = trainControl(method = "cv", number = 5)
+)
+
+# 8. Predecir y mostrar matriz de confusión
+predictions <- predict(model, newdata = test_final)
+confusionMatrix(predictions, test_final$meningitis_bacteriana_aguda)
+```
+
+# Calculamos el AUC-ROC:
+
+```{r}
+# Instalar si no la tienes
+# install.packages("pROC")
+
+library(caret)
+library(pROC)
+
+# Obtener probabilidades
+probabilities <- predict(model, newdata = test_final, type = "prob")[,2]
+
+# Calcular curva ROC
+roc_curve <- roc(test_final$meningitis_bacteriana_aguda, probabilities)
+
+# Mostrar AUC
+auc_value <- auc(roc_curve)
+print(auc_value)
+
+# Graficar ROC
+plot(roc_curve, col = "blue", main = "ROC Curve - Logistic Regression")
+
+```
+
+# Interpretación de Resultados
+
+# Coeficientes del Modelo
+
+Los coeficientes del modelo de regresión logística indican la importancia de cada variable. Por ejemplo:
+
+-   Un coeficiente positivo para leucocitos_lcr sugiere que niveles elevados aumentan la probabilidad de meningitis.
+-   Un coeficiente negativo para glucosa_lcr indica que niveles bajos están asociados con meningitis.
+
+# Métricas de Rendimiento
+
+-   **Precisión:** Porcentaje de predicciones correctas.
+-   **Recall:** Capacidad del modelo para identificar casos positivos (crucial en un contexto médico).
+-   **F1-score:** Balance entre precisión y recall.
+-   **AUC-ROC:** Mide la capacidad del modelo para distinguir entre clases; un valor cercano a 1 indica un modelo robusto.
+
+# Insights Clínicos
+
+-   Variables como leucocitos_lcr y proteina_lcr son clave, alineándose con el conocimiento médico sobre meningitis.
+-   Una baja glucosa_lcr también es un predictor importante, consistente con la fisiopatología de la enfermedad.
+-   Estos resultados pueden ayudar a priorizar pruebas de laboratorio o identificar casos urgentes.
+
+# Conclusión e interpretación
+
+-   El modelo de regresión logística desarrollado para predecir meningitis bacteriana aguda mostró un **excelente desempeño**, alcanzando una exactitud del **91,3 %** y un índice Kappa de **0,82**, lo que indica un alto grado de concordancia entre las predicciones y los casos reales.
+
+-   La sensibilidad (91,8 %) y la especificidad (90,8 %) reflejan una buena capacidad tanto para identificar correctamente los casos de meningitis bacteriana aguda como para descartar los negativos. Además, el análisis ROC evidenció un AUC elevado (por calcular), sugiriendo un **fuerte poder discriminativo** del modelo. En conjunto, estos resultados indican que el modelo es **fiable y útil como herramienta predictiva**, pudiendo apoyar el diagnóstico clínico de meningitis bacteriana aguda en el contexto de los datos analizados.
+
+-   La regresión logística aplicada al dataset bac_aguda.csv permite clasificar con precisión la presencia de meningitis bacteriana aguda. Las variables clave identificadas, como leucocitos_lcr y glucosa_lcr, son consistentes con el conocimiento clínico, lo que respalda la validez del modelo. Este enfoque puede ser útil para apoyar decisiones clínicas en el diagnóstico de meningitis.

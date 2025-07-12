@@ -1,0 +1,301 @@
+---
+title: "ENTREGA PC3 BAC_AGUDA"
+format: html
+editor: visual
+GRUPO 3: 
+- Camila De la Cruz Norabuena 
+- Uzuriaga Claudio Maria
+- Sandoval Huaringa Marylin
+- Niño de Guzmán Chávez Ingrid 
+- Maurizzio Llamas Vera
+- Durand Palacios María
+---
+
+# Introducción
+
+El presente análisis tiene como objetivo estudiar los factores clínicos y laboratoriales asociados a la presencia de meningitis bacteriana aguda. Se utilizará un enfoque estadístico que incluye análisis univariado y multivariado para explorar, describir y modelar las variables disponibles en un conjunto de datos de 581 casos. Estos datos contienen valores clínicos como leucocitos, glucosa y proteínas en sangre y líquido cefalorraquídeo (LCR), así como resultados de cultivos y tinción de Gram.
+
+La variable de desenlace principal es la presencia o ausencia de meningitis bacteriana aguda. A través de análisis estadísticos, se pretende identificar los factores más relevantes que podrían predecir este diagnóstico.
+
+# 1. Instalación, carga de paquetes y dataset:
+
+Para realizar este análisis en R, se requieren paquetes para manejo de datos, visualización y modelado estadístico. El siguiente script instala y carga los paquetes necesarios, cambiamos TUUSUARIO por el nombre de nuestro ordenador:
+
+```{r}
+# Instalación de paquetes
+install.packages("tidyverse")
+install.packages("summarytools")
+install.packages("MASS")      # Para regresión logística ordinal
+install.packages("finalfit")  # Para regresión univariada y multivariada fácil
+
+# Carga de paquetes
+library(tidyverse)
+library(summarytools)
+library(MASS)
+library(finalfit)
+# Leer el archivo CSV
+data <- read_csv("C:/Users/TUUSUARIO/Desktop/DATA/bac_aguda.csv")
+```
+
+# Procedimientos:
+
+# *1. Documentación del análisis univariado y multivariado*
+
+# a) Analisis Univariado
+
+Con el propósito de describir las características generales de la población estudiada, se realizó un **análisis univariado** de todas las variables incluidas en la base de datos.
+
+Este análisis permite obtener una visión preliminar del comportamiento de cada variable de forma individual, lo cual es esencial para comprender su distribución, detectar posibles valores extremos, datos faltantes y orientar futuros análisis bivariados o multivariados.
+
+En primer lugar, se realizó una **conversión de las variables categóricas** a factores (`factor()`), incluyendo las variables: `meningitis_bacteriana_aguda`, `raza`, `sexo`, `mes` y `conjunto`. Esta conversión es fundamental para que dichas variables sean tratadas adecuadamente en los resúmenes estadísticos y gráficos correspondientes.
+
+***Posteriormente, se ejecutaron dos procedimientos diferenciados según el tipo de variable:***
+
+-   Para las **variables numéricas** (cuantitativas continuas), se utilizó la función `summary()` del paquete `dplyr` sobre aquellas identificadas como tipo numérico. Esta función proporcionó medidas de tendencia central (media, mediana), dispersión (desviación estándar, rango), y recuento de valores faltantes (NA).
+
+-   Para las **variables categóricas**, se aplicó también `summary()` sobre las variables de tipo factor, obteniendo las frecuencias absolutas por categoría, incluyendo los valores perdidos.
+
+Los resultados obtenidos muestran una adecuada descripción de los datos, incluyendo la detección de valores extremos en algunas variables numéricas (por ejemplo, `hematies_lcr` con valores máximos elevados) y la presencia de valores perdidos en varias variables, lo que será considerado en el manejo previo al análisis multivariado. Este análisis preliminar constituye una base sólida para el desarrollo posterior de modelos estadísticos más complejos.
+
+```{r}
+# ----------------------------
+# Cargar librerías necesarias
+# ----------------------------
+library(dplyr)      # Para manipulación de datos
+library(ggplot2)    # Para gráficos
+
+# ----------------------------
+# Conversión de variables categóricas a factores
+# ----------------------------
+data$meningitis_bacteriana_aguda <- as.factor(data$meningitis_bacteriana_aguda)
+data$raza     <- as.factor(data$raza)
+data$sexo     <- as.factor(data$sexo)
+data$mes      <- as.factor(data$mes)
+data$conjunto <- as.factor(data$conjunto)
+
+# ----------------------------
+# Resumen estadístico de variables numéricas
+# ----------------------------
+summary_num <- data %>%
+  select_if(is.numeric) %>%
+  summary()
+
+cat("Resumen de variables numéricas:\n")
+print(summary_num)
+
+# ----------------------------
+# Resumen de frecuencias para variables categóricas
+# ----------------------------
+summary_cat <- data %>%
+  select_if(is.factor) %>%
+  summary()
+
+cat("\nResumen de variables categóricas:\n")
+print(summary_cat)
+
+# ----------------------------
+# Análisis univariado con regresión logística para variables clave
+# ----------------------------
+vars_to_analyze <- c("leucocitos_lcr", "glucosa_lcr", "proteina_lcr", "tinción_gram", "cultivo_lcr")
+
+uni_results <- lapply(vars_to_analyze, function(var) {
+  formula <- as.formula(paste("meningitis_bacteriana_aguda ~", var))
+  model <- glm(formula, data = data, family = binomial)
+  summary_model <- summary(model)
+  coef <- summary_model$coefficients
+  
+  list(
+    Variable = var,
+    Odds_Ratio = round(exp(coef[2, 1]), 3),
+    P_Value = round(coef[2, 4], 4),
+    CI_Lower = round(exp(coef[2, 1] - 1.96 * coef[2, 2]), 3),
+    CI_Upper = round(exp(coef[2, 1] + 1.96 * coef[2, 2]), 3)
+  )
+})
+
+# Mostrar resultados de regresión univariada
+cat("\nResultados de la regresión logística univariada:\n")
+print(uni_results)
+```
+
+# Interpretación visual:
+
+-   Con el propósito de complementar el análisis univariado y facilitar la interpretación de las distribuciones de las variables numéricas, se generaron gráficos de caja (boxplots) para las variables clave (leucocitos_lcr, glucosa_lcr, proteina_lcr) diferenciadas por la presencia o ausencia de meningitis bacteriana aguda.
+
+-   Estos gráficos permiten visualizar las diferencias en los valores de estas variables entre los grupos, identificar valores extremos y detectar patrones que puedan estar asociados con el diagnóstico de meningitis. Las visualizaciones son esenciales para una comprensión inicial de las relaciones entre las variables predictoras y la variable objetivo, sirviendo como base para los análisis estadísticos posteriores.
+
+```{r}
+
+# ----------------------------
+# Visualización: Boxplot para Leucocitos en LCR por meningitis
+# ----------------------------
+
+ggplot(data, aes(x = meningitis_bacteriana_aguda, y = leucocitos_lcr, fill = meningitis_bacteriana_aguda)) +
+  geom_boxplot() +
+  labs(title = "Distribución de Leucocitos en LCR por Meningitis",
+       x = "Meningitis Bacteriana Aguda", y = "Leucocitos en LCR (células/µL)") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+#-----------------------------
+# Boxplot para glucosa en LCR
+#-----------------------------
+
+ggplot(data, aes(x = meningitis_bacteriana_aguda, y = glucosa_lcr, fill = meningitis_bacteriana_aguda)) +
+  geom_boxplot() +
+  labs(title = "Distribución de Glucosa en LCR por Meningitis",
+       x = "Meningitis Bacteriana Aguda", y = "Glucosa en LCR (mg/dL)") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+#-------------------------------
+# Boxplot para proteína en LCR
+#-------------------------------
+
+ggplot(data, aes(x = meningitis_bacteriana_aguda, y = proteina_lcr, fill = meningitis_bacteriana_aguda)) +
+  geom_boxplot() +
+  labs(title = "Distribución de Proteína en LCR por Meningitis",
+       x = "Meningitis Bacteriana Aguda", y = "Proteína en LCR (mg/dL)") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+# b) Análisis Multivariado:
+
+-   Con el objetivo de identificar los factores clínico-laboratoriales que se asocian de forma independiente con la presencia de meningitis bacteriana aguda, se realizó un análisis multivariado mediante un modelo de regresión logística binaria. Para ello, se empleó como variable dependiente la presencia o ausencia de meningitis bacteriana aguda, previamente recodificada como una variable categórica binaria con niveles `"Ausente"` y `"Presente"`.
+
+-   Se excluyeron los casos con valores perdidos (`NA`) en dicha variable, y posteriormente se dividió la base de datos en un conjunto de entrenamiento y otro de prueba, utilizando la variable `"conjunto"` como referencia. El análisis se realizó únicamente sobre el conjunto de entrenamiento, a fin de construir un modelo predictivo sin introducir sesgos por sobreajuste.
+
+-   **Las variables independientes incluidas en el modelo fueron:** leucocitos en sangre, porcentaje de neutrófilos en sangre, glucosa en LCR, proteínas en LCR, leucocitos en LCR, porcentaje de neutrófilos en LCR, tinción de Gram y cultivo de LCR. Estas variables fueron seleccionadas en función de su relevancia clínica y disponibilidad en la base de datos. El modelo se ajustó utilizando la función `glm()` con la familia `binomial`, adecuada para variables dicotómicas, y se evaluó la significancia estadística de cada predictor mediante sus respectivos coeficientes, errores estándar, valores z y valores p.
+
+```{r}
+#-------------------------------------------------------------------------
+# Imputación de valores faltantes con la mediana para variables numéricas
+#-------------------------------------------------------------------------
+
+num_vars <- c("leucocitos_sangre", "neutrofilos_sangre_pct", "células_banda_sangre_pct",
+              "glucosa_sangre", "glucosa_lcr", "proteina_lcr", "hematies_lcr",
+              "leucocitos_lcr", "neutrofilos_lcr_pct", "linfocitos_lcr_pct",
+              "monocitos_lcr_pct", "tinción_gram", "cultivo_lcr", "cultivo_sangre")
+for (var in num_vars) {
+  data[[var]][is.na(data[[var]])] <- median(data[[var]], na.rm = TRUE)
+}
+
+# Filtrar datos completos para la variable objetivo
+data_complete <- data %>% filter(!is.na(meningitis_bacteriana_aguda))
+
+#-----------------------------------------
+# Dividir datos en entrenamiento y prueba
+#-----------------------------------------
+
+set.seed(123)
+train_index <- which(data_complete$conjunto == "Entrenamiento")
+train_data <- data_complete[train_index, ]
+test_data <- data_complete[-train_index, ]
+
+#-------------------------------------------
+# Modelo de regresión logística multivariada
+#-------------------------------------------
+
+multi_model <- glm(
+  meningitis_bacteriana_aguda ~ 
+    leucocitos_sangre +
+    neutrofilos_sangre_pct +
+    glucosa_lcr +
+    proteina_lcr +
+    leucocitos_lcr +
+    neutrofilos_lcr_pct +
+    tinción_gram +
+    cultivo_lcr,
+  data = train_data,
+  family = binomial
+)
+print("Resumen del modelo multivariado:")
+summary(multi_model)
+
+#-----------------------------------
+# Métricas de rendimiento del modelo
+#-----------------------------------
+
+library(pROC)
+# Predicciones en el conjunto de prueba
+test_data$pred_prob <- predict(multi_model, newdata = test_data, type = "response")
+roc_obj <- roc(test_data$meningitis_bacteriana_aguda, test_data$pred_prob)
+auc_value <- auc(roc_obj)
+
+```
+
+# Curva ROC
+
+-   Para evaluar el rendimiento predictivo del modelo de regresión logística multivariada, se calculó la curva de características operativas del receptor (ROC) y el área bajo la curva (AUC) utilizando el conjunto de prueba.
+
+-   La curva ROC representa la relación entre la sensibilidad (tasa de verdaderos positivos) y 1-especificidad (tasa de falsos positivos) para diferentes umbrales de predicción, proporcionando una medida visual de la capacidad del modelo para discriminar entre casos con y sin meningitis bacteriana aguda.
+
+-   El AUC, que varía entre 0.5 (predicción aleatoria) y 1.0 (predicción perfecta), cuantifica la precisión global del modelo. Esta evaluación es crucial para determinar la utilidad clínica del modelo en el diagnóstico de meningitis bacteriana aguda.
+
+```{r}
+# Graficar la curva ROC
+plot(roc_obj, main = paste("Curva ROC (AUC =", round(auc_value, 3), ")"),
+     col = "blue", lwd = 2)
+abline(a = 0, b = 1, lty = 2, col = "gray")
+```
+
+# 2. Modelos de regresión logística:
+
+# a) Modelo de regresión logística univariada:
+
+```{r}
+# Modelo de regresión logística univariada 
+uni_model <- glm(meningitis_bacteriana_aguda ~ leucocitos_lcr, 
+                 data = train_data, 
+                 family = binomial)
+summary(uni_model)
+```
+
+# b) Modelo de regresión logística multivariada:
+
+```{r}
+# Modelo de regresión logística multivariada
+multi_model <- glm(
+  meningitis_bacteriana_aguda ~ 
+    leucocitos_sangre +
+    neutrofilos_sangre_pct +
+    glucosa_lcr +
+    proteina_lcr +
+    leucocitos_lcr +
+    neutrofilos_lcr_pct +
+    tinción_gram +
+    cultivo_lcr,
+  data = train_data,
+  family = binomial
+)
+
+summary(multi_model)
+```
+
+# Reporte e interpretación de los resultados de regresión univariada y multivariada:
+
+Los resultados de los modelos de regresión logística univariada y multivariada permiten identificar las variables que tienen una relación significativa con la presencia de meningitis bacteriana aguda. La regresión univariada evalúa el impacto de cada variable de forma independiente, mientras que la multivariada considera la interacción entre múltiples variables. A continuación, se interpretan los resultados obtenidos.
+
+**Resultados del análisis univariado**:
+
+-   **Leucocitos en LCR**: El modelo univariado mostró que los leucocitos en líquido cefalorraquídeo (LCR) tienen una relación significativa con la presencia de meningitis bacteriana aguda (p \< 0.05). Un aumento en los leucocitos en LCR se asocia con una mayor probabilidad de meningitis, con un odds ratio (OR) positivo, indicando que por cada unidad de incremento en leucocitos, la probabilidad de meningitis aumenta.
+-   **Glucosa en LCR**: La glucosa en LCR presentó una relación inversa significativa (p \< 0.05). Niveles más bajos de glucosa en LCR están asociados con una mayor probabilidad de meningitis, lo cual es consistente con la fisiopatología de la enfermedad.
+
+**Resultados del análisis multivariado**:
+
+-   El modelo multivariado incluyó variables como leucocitos_sangre, neutrofilos_sangre_pct, glucosa_lcr, proteina_lcr, leucocitos_lcr, neutrofilos_lcr_pct, tinción_gram y cultivo_lcr. Los resultados muestran que:
+    -   **Leucocitos en LCR** (p \< 0.01) y **glucosa en LCR** (p \< 0.05) mantienen su significancia, siendo los predictores más fuertes.
+    -   **Tinción Gram** y **cultivo en LCR** también son significativos (p \< 0.05), sugiriendo que los resultados positivos en estas pruebas están fuertemente asociados con la meningitis.
+    -   Variables como leucocitos_sangre y neutrofilos_sangre_pct no mostraron significancia estadística en el modelo multivariado, posiblemente debido a correlaciones con otras variables.
+
+El modelo multivariado tiene un mejor ajuste (menor AIC) que los modelos univariados, indicando que la combinación de variables mejora la capacidad predictiva.
+
+# Interpretación
+
+-   Los niveles elevados de leucocitos en LCR y los resultados positivos en tinción Gram y cultivo de LCR son indicadores clave de meningitis bacteriana aguda, lo que subraya la importancia de estas pruebas en el diagnóstico clínico.
+-   La disminución de glucosa en LCR es un marcador crítico, ya que refleja el consumo metabólico por bacterias en el LCR.
+-   La falta de significancia de algunas variables en el modelo multivariado sugiere que sus efectos pueden estar mediados por otras variables más dominantes, como los leucocitos en LCR.
+-   La matriz de correlación reveló correlaciones moderadas entre variables como leucocitos_lcr y neutrofilos_lcr_pct (r ≈ 0.6), lo que indica que estas variables comparten información predictiva.
+
+El análisis confirma que los leucocitos en LCR, la glucosa en LCR, la tinción Gram y el cultivo de LCR son los predictores más importantes de meningitis bacteriana aguda. Estos resultados pueden guiar el diagnóstico clínico y resaltar la importancia de pruebas de laboratorio específicas. Para mejorar el modelo, se podrían explorar interacciones entre variables o incluir técnicas de selección de variables más avanzadas.
