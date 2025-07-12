@@ -1,0 +1,222 @@
+---
+title: "Análisis Visual de Casos de Meningitis Bacteriana Aguda - GRUPO 3"
+author: |
+  - GRUPO 3
+  - Camila De la Cruz Norabuena
+  - Uzuriaga Claudio Maria
+  - Sandoval Huaringa Marylin
+  - Niño de Guzmán Chávez Ingrid
+  - Stephano Llamas Vera
+  - Durand Palacios María
+format: html
+editor: visual
+---
+
+# Instalación de paquetes necesarios
+
+Antes de comenzar con el análisis, es imprescindible instalar y cargar los paquetes necesarios para la visualización y manipulación de datos.
+
+```{r setup, message=FALSE, warning=FALSE}
+# Instalación de paquetes si no están disponibles
+if (!require(ggplot2)) install.packages("ggplot2")
+if (!require(dplyr)) install.packages("dplyr")
+if (!require(GGally)) install.packages("GGally")
+if (!require(forcats)) install.packages("forcats")
+if (!require(readr)) install.packages("readr")
+
+# Carga de paquetes
+library(ggplot2)
+library(dplyr)
+library(GGally)
+library(forcats)
+library(readr)
+```
+
+# Carga del conjunto de datos
+
+Una vez cargadas las librerías, se procede a cargar el dataset que contiene los datos clínicos de pacientes sospechosos o diagnosticados con meningitis bacteriana aguda.
+
+```{r}
+data <- read_csv("C:/Users/TuUsuario/Desktop/data/bac_aguda.csv")
+```
+
+------------------------------------------------------------------------
+
+## 1. Distribución de glucosa en sangre
+
+**Introducción**: Se utilizará un boxplot horizontal para observar la distribución de glucosa en sangre. Esta variable es crítica ya que la hipoglucorraquia (glucosa baja en sangre o LCR) puede asociarse a infecciones bacterianas.
+
+```{r}
+boxplot(data$glucosa_sangre, horizontal = TRUE, col = "skyblue", ylab = "Glucosa en Sangre")
+```
+
+------------------------------------------------------------------------
+
+## 2. Frecuencia de meningitis por edad
+
+**Introducción**: Con un gráfico de barras agrupadas, se analiza cómo varía el diagnóstico de meningitis entre edades. Esto permite ver si hay grupos etarios más vulnerables.
+
+```{r}
+ggplot(data, aes(x = as.factor(edad), fill = meningitis_bacteriana_aguda)) +
+  geom_bar(position = "dodge") +
+  labs(y = "Frecuencia", x = "Edad", fill = "Diagnóstico") +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+------------------------------------------------------------------------
+
+## 3. Frecuencia absoluta de edades
+
+**Introducción**: Se grafica la frecuencia con que aparecen las edades en el dataset. Ayuda a entender la composición etaria de la muestra analizada.
+
+```{r}
+ggplot(data, aes(x = fct_infreq(as.factor(edad)), fill = as.factor(edad))) +
+  geom_bar() +
+  labs(y = "Frecuencia", x = "Edad") +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+------------------------------------------------------------------------
+
+## 4. Glucosa en LCR según diagnóstico
+
+**Introducción**: Se contrasta la glucosa en LCR entre pacientes con y sin meningitis, usando boxplots. Valores bajos refuerzan la sospecha de infección.
+
+```{r}
+data %>%
+  filter(!is.na(glucosa_lcr), !is.na(meningitis_bacteriana_aguda)) %>%
+  ggplot(aes(x = meningitis_bacteriana_aguda, y = glucosa_lcr)) +
+  geom_boxplot(fill = "lightgreen") +
+  labs(y = "Glucosa en LCR", x = "Diagnóstico")
+```
+
+------------------------------------------------------------------------
+
+## 5. Distribución de proteínas en LCR
+
+**Introducción**: Las proteínas en LCR suelen aumentar en infecciones. Este boxplot muestra su comportamiento general en la muestra.
+
+```{r}
+ggplot(data, aes(y = proteina_lcr)) +
+  geom_boxplot(fill = "lightcoral") +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  labs(y = "Proteínas en LCR")
+```
+
+------------------------------------------------------------------------
+
+## 6. Proporciones de meningitis por edad
+
+**Introducción**: Se analiza la proporción de diagnósticos positivos por grupo etario. Permite identificar edades de mayor riesgo relativo.
+
+```{r}
+data %>%
+  group_by(edad, meningitis_bacteriana_aguda) %>%
+  count() %>%
+  group_by(edad) %>%
+  mutate(Proporcion = n / sum(n)) %>%
+  ggplot(aes(x = as.factor(edad), y = Proporcion, fill = meningitis_bacteriana_aguda)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(y = "Proporción", x = "Edad", fill = "Diagnóstico") +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+------------------------------------------------------------------------
+
+## 7. Correlación entre glucosa sangre y LCR
+
+**Introducción**: Esta gráfica de dispersión analiza si hay relación entre los niveles de glucosa en sangre y en el LCR, lo cual es relevante en el contexto clínico.
+
+```{r}
+ggplot(data, aes(x = glucosa_sangre, y = glucosa_lcr)) +
+  geom_point(color = "purple") +
+  labs(x = "Glucosa en Sangre", y = "Glucosa en LCR")
+```
+
+------------------------------------------------------------------------
+
+## 8. Relación entre edad y leucocitos en LCR
+
+**Introducción**: Los leucocitos en LCR indican inflamación o infección. Se observa si su concentración varía con la edad.
+
+```{r}
+ggplot(data, aes(x = edad, y = leucocitos_lcr)) +
+  geom_point(color = "darkblue") +
+  labs(x = "Edad", y = "Leucocitos en LCR")
+```
+
+------------------------------------------------------------------------
+
+## 9. Matriz de correlaciones entre variables numéricas
+
+**Introducción**: Se utiliza `ggpairs()` para visualizar la correlación entre múltiples variables clínicas cuantitativas.
+
+```{r}
+data_cor <- data %>% select_if(is.numeric)
+ggpairs(data_cor, progress = FALSE)
+```
+
+------------------------------------------------------------------------
+
+## 10. Diagnóstico según sexo
+
+**Introducción**: Se analiza si hay diferencias de frecuencia de meningitis entre hombres y mujeres.
+
+```{r}
+ggplot(data, aes(x = sexo, fill = meningitis_bacteriana_aguda)) +
+  geom_bar(position = "dodge") +
+  labs(x = "Sexo", y = "Frecuencia", fill = "Diagnóstico")
+```
+
+------------------------------------------------------------------------
+
+## 11. Diagnóstico según raza
+
+**Introducción**: Este gráfico observa la prevalencia del diagnóstico en distintas razas, útil para estudios poblacionales.
+
+```{r}
+ggplot(data, aes(x = raza, fill = meningitis_bacteriana_aguda)) +
+  geom_bar(position = "dodge") +
+  labs(x = "Raza", y = "Frecuencia", fill = "Diagnóstico")
+```
+
+------------------------------------------------------------------------
+
+## 12. Histograma de edades
+
+**Introducción**: Un histograma simple permite ver la distribución general de edades del dataset.
+
+```{r}
+ggplot(data, aes(x = edad)) +
+  geom_histogram(binwidth = 5, fill = "orange", color = "black") +
+  labs(x = "Edad", y = "Frecuencia")
+```
+
+------------------------------------------------------------------------
+
+## 13. Leucocitos en sangre según sexo
+
+**Introducción**: Se analiza si hay diferencias de respuesta inmune (leucocitos en sangre) entre hombres y mujeres.
+
+```{r}
+ggplot(data, aes(x = sexo, y = leucocitos_sangre)) +
+  geom_boxplot(fill = "orchid") +
+  labs(x = "Sexo", y = "Leucocitos en Sangre")
+```
+
+------------------------------------------------------------------------
+
+## 14. Relaciones clínicas clave (ggpairs)
+
+**Introducción**: Se observan simultáneamente la glucosa, proteínas y leucocitos, para evaluar relaciones clínicas relevantes.
+
+```{r}
+data_select <- data %>% select(glucosa_sangre, glucosa_lcr, proteina_lcr, leucocitos_lcr)
+ggpairs(data_select, progress = FALSE)
+```
+
+------------------------------------------------------------------------
+
+## Conclusión
+
+El análisis visual ha permitido obtener una mejor comprensión de las variables clínicas asociadas a la meningitis bacteriana aguda. Las visualizaciones ayudan a identificar patrones y relaciones, que pueden guiar futuras investigaciones o decisiones médicas.
